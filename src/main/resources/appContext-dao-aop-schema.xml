@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd">
+
+    <bean id="aspect-profiler"         class="com.eshop.aspect.SimpleProfiler" />
+    <bean id="aspect-logger"           class="com.eshop.aspect.SimpleLogger" />
+    <bean id="aspect-exception-logger" class="com.eshop.aspect.SimpleExceptionLogger" />
+
+    <aop:config>
+        <!-- AOP  производит выборку ТОЛЬКО из классов кот создал сам SPRING <beans>..<bean/>..</beans>-->
+        <aop:aspect ref="aspect-profiler">
+                      <!--id - это имя-->
+            <aop:pointcut id="selectById"
+                          expression="execution(* com.eshop.dao.ProductDao.selectById(int)) and args(id)"/>
+            <!--expression - это предикат выборки, т е именованное условие выборки-->
+            <!--я хочу перехватить метод selectById с арг-м int интерфейса ProductDao (*) не зависимо от его области видимости-->
+            <aop:around pointcut-ref="selectById"
+                        method="profile"/>
+        </aop:aspect>
+        <aop:aspect ref="aspect-logger">
+            <aop:pointcut id="any-dao-methods"
+                          expression="execution(* com.eshop.dao.ProductDao.*(..))"/>
+            <!-- around: вокруг, т е до вызова и после-->
+            <aop:around pointcut-ref="any-dao-methods"
+                        method="log"/>
+        </aop:aspect>
+
+        <aop:aspect ref="aspect-exception-logger">
+            <!-- т е все методы из всех пакетов-->
+            <aop:pointcut id="any-public-methods"
+                          expression="execution(public * *(..))"/>
+            <!-- public: публичные методы, (*): из любого пакета, (*): с любым названием, (..): с любыми арг-ми-->
+            <!--after-throwing: это JOINPOINT, т е вызвать после того как метод выбросит исключение -->
+            <aop:after-throwing pointcut-ref="any-public-methods"
+                                method="logException" throwing="t"/>
+        </aop:aspect>
+    </aop:config>
+
+    <bean id="productDao" class="com.eshop.dao.impl.ProductDaoMock"></bean>
+
+</beans>
